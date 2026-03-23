@@ -1,0 +1,32 @@
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+infra/.terraform.lock.hcl
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/.env
+.venv/
+
+# ML / data
+ml/data/*.csv
+ml/data/*.parquet
+ml/**/*.pkl
+ml/**/*.joblib
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
