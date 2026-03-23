@@ -1,0 +1,54 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '--no-cache', '-t', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/neighborhood-svc:latest', './services/neighborhood']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/neighborhood-svc:latest']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '--no-cache', '-t', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/predictor-svc:latest', './services/predictor']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/predictor-svc:latest']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '--no-cache', '-t', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/dashboard-svc:latest', './services/dashboard']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/dashboard-svc:latest']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '--no-cache', '-t', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/recommender-svc:latest', './services/recommender']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/recommender-svc:latest']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '--no-cache', '-t', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/frontend:latest', './frontend']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/frontend:latest']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'bash'
+      - '-c'
+      - |
+        gcloud run deploy neighborhood-svc \
+          --image=us-east1-docker.pkg.dev/housing-app-490522/housing-app/neighborhood-svc:latest \
+          --region=us-east1 --project=housing-app-490522 &&
+        gcloud run deploy predictor-svc \
+          --image=us-east1-docker.pkg.dev/housing-app-490522/housing-app/predictor-svc:latest \
+          --region=us-east1 --project=housing-app-490522 &&
+        gcloud run deploy dashboard-svc \
+          --image=us-east1-docker.pkg.dev/housing-app-490522/housing-app/dashboard-svc:latest \
+          --region=us-east1 --project=housing-app-490522 &&
+        gcloud run deploy recommender-svc \
+          --image=us-east1-docker.pkg.dev/housing-app-490522/housing-app/recommender-svc:latest \
+          --region=us-east1 --project=housing-app-490522 &&
+        gcloud run deploy frontend \
+          --image=us-east1-docker.pkg.dev/housing-app-490522/housing-app/frontend:latest \
+          --region=us-east1 --project=housing-app-490522
+
+options:
+  logging: CLOUD_LOGGING_ONLY
