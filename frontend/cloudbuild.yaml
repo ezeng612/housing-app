@@ -1,0 +1,28 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--no-cache'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/frontend:latest'
+      - '.'
+    dir: 'frontend'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-east1-docker.pkg.dev/housing-app-490522/housing-app/frontend:latest'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'run'
+      - 'deploy'
+      - 'frontend'
+      - '--image=us-east1-docker.pkg.dev/housing-app-490522/housing-app/frontend:latest'
+      - '--region=us-east1'
+      - '--platform=managed'
+      - '--project=housing-app-490522'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
