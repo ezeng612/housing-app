@@ -1,9 +1,18 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import bigquery
 from typing import Optional
 import os
 
 app = FastAPI(title="Dashboard API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 PROJECT_ID = os.getenv("PROJECT_ID", "housing-app-490522")
 DATASET    = "housing_data"
@@ -36,7 +45,7 @@ def get_kpis(
     where = " AND ".join(conditions)
 
     sql = f"""
-        WITH current AS (
+        WITH summary AS (
             SELECT
                 ROUND(AVG(zhvi_sfr), 0)            AS avg_home_value,
                 ROUND(AVG(median_income), 0)        AS avg_median_income,
@@ -47,7 +56,7 @@ def get_kpis(
             FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
             WHERE {where}
         )
-        SELECT * FROM current
+        SELECT * FROM summary
     """
 
     try:
@@ -84,7 +93,7 @@ def get_price_trends(
             ROUND(AVG(zori_rent), 0)            AS avg_rent,
             COUNT(DISTINCT zip_code)            AS zip_count
         FROM `{PROJECT_ID}.{DATASET}.zip_market_data` z
-        WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL {months} MONTH)
+        WHERE date >= DATE_SUB(CURRENT_DATE, INTERVAL {months} MONTH)
         {geo_filter}
         GROUP BY period
         ORDER BY period ASC

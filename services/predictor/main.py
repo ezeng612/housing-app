@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google.cloud import bigquery
 from typing import Optional
@@ -6,6 +7,14 @@ import numpy as np
 import os
 
 app = FastAPI(title="Market Value Predictor API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 PROJECT_ID = os.getenv("PROJECT_ID", "housing-app-490522")
 DATASET    = "housing_data"
