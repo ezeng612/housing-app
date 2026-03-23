@@ -19,73 +19,32 @@ def upload_csv(df, blob_name):
 
 def extract_zip(geo_id):
     geo_id = str(geo_id)
-    if "ZCTA5" in geo_id:
-        return geo_id.split("US")[-1].strip().zfill(5)
+    if 'US' in geo_id:
+        return geo_id.split('US')[-1].strip().zfill(5)
     return geo_id[-5:].zfill(5)
 
 def process_income(df):
     print("  Processing income data...")
-
-    # Skip the second header row that Census includes
-    df = df[df["GEO_ID"] != "id"].copy()
-    df["zip_code"] = df["GEO_ID"].apply(extract_zip)
-
-    # S1901_C01_012E = median household income estimate
-    # S1901_C01_012M = margin of error
-    income_col = next(
-        (c for c in df.columns if "C01_012E" in c), None)
-    margin_col = next(
-        (c for c in df.columns if "C01_012M" in c), None)
-
-    if not income_col:
-        print("  Warning: income column not found, checking available columns...")
-        print(df.columns.tolist()[:20])
-        return pd.DataFrame()
-
-    out = pd.DataFrame()
-    out["zip_code"]      = df["zip_code"]
-    out["median_income"] = pd.to_numeric(df[income_col], errors="coerce")
-
-    if margin_col:
-        out["income_margin"] = pd.to_numeric(df[margin_col], errors="coerce")
-    else:
-        out["income_margin"] = None
-
-    out = out.dropna(subset=["median_income"])
-    out = out[out["median_income"] > 0]
+    df['zip_code']      = df['GEO_ID'].apply(extract_zip)
+    df['median_income'] = pd.to_numeric(df.get('S1901_C01_012E'), errors='coerce')
+    df['income_margin'] = pd.to_numeric(df.get('S1901_C01_012M'), errors='coerce')
+    out = df[['zip_code', 'median_income', 'income_margin']]
+    out = out.dropna(subset=['median_income'])
+    out = out[out['median_income'] > 0]
     print(f"  Income rows: {len(out):,}")
     return out
 
 def process_housing(df):
-    print("  Processing housing characteristics...")
-
-    df = df[df["GEO_ID"] != "id"].copy()
-    df["zip_code"] = df["GEO_ID"].apply(extract_zip)
-
-    # DP04_0001E = total housing units
-    # DP04_0002E = occupied housing units
-    # DP04_0046PE = owner occupied %
-    # DP04_0037E = median number of rooms
-    col_map = {
-        "0001E": "total_units",
-        "0002E": "occupied_units",
-        "0046PE": "owner_occupied_pct",
-        "0037E": "median_rooms",
-    }
-
-    out = pd.DataFrame()
-    out["zip_code"] = df["zip_code"]
-
-    for suffix, new_name in col_map.items():
-        col = next((c for c in df.columns if suffix in c), None)
-        if col:
-            out[new_name] = pd.to_numeric(df[col], errors="coerce")
-        else:
-            print(f"  Warning: column with suffix {suffix} not found")
-            out[new_name] = None
-
-    out = out.dropna(subset=["total_units"])
-    out = out[out["total_units"] > 0]
+    print("  Processing housing data...")
+    df['zip_code']          = df['GEO_ID'].apply(extract_zip)
+    df['total_units']       = pd.to_numeric(df.get('DP04_0001E'), errors='coerce')
+    df['occupied_units']    = pd.to_numeric(df.get('DP04_0002E'), errors='coerce')
+    df['owner_occupied_pct']= pd.to_numeric(df.get('DP04_0046PE'), errors='coerce')
+    df['median_rooms']      = pd.to_numeric(df.get('DP04_0037E'), errors='coerce')
+    out = df[['zip_code', 'total_units', 'occupied_units',
+              'owner_occupied_pct', 'median_rooms']]
+    out = out.dropna(subset=['total_units'])
+    out = out[out['total_units'] > 0]
     print(f"  Housing rows: {len(out):,}")
     return out
 
@@ -93,14 +52,16 @@ if __name__ == "__main__":
     print("Processing Census income data...")
     income_raw = download_csv(
         "census/ACSST5Y2024.S1901-Data.csv",
-        low_memory=False
+        low_memory=False,
+        skiprows=[1]
     )
     income_df = process_income(income_raw)
 
     print("Processing Census housing data...")
     housing_raw = download_csv(
         "census/ACSDP5Y2024.DP04-Data.csv",
-        low_memory=False
+        low_memory=False,
+        skiprows=[1]
     )
     housing_df = process_housing(housing_raw)
 

@@ -42,17 +42,22 @@ def search_neighborhoods(
     min_income:     Optional[float] = Query(None),
     max_budget:     Optional[float] = Query(None),
     value_tier:     Optional[str]   = Query(None),
+    min_population: Optional[float] = Query(None),
+    max_population: Optional[float] = Query(None),
+    pop_class:      Optional[str]   = Query(None),
+    min_safety:     Optional[float] = Query(None),
+    min_air_quality:Optional[float] = Query(None),
     sort_by:        str             = Query("value_score"),
     limit:          int             = Query(20),
 ):
     allowed_sorts = [
         "value_score", "affordability_score", "zhvi_sfr",
-        "median_income", "education_index", "price_to_income_ratio"
+        "median_income", "education_index", "price_to_income_ratio",
+        "safety_index", "air_quality_index", "natural_amenity_score"
     ]
     if sort_by not in allowed_sorts:
         sort_by = "value_score"
 
-    # Price to income ratio sorts ascending (lower is better)
     sort_direction = "ASC" if sort_by == "price_to_income_ratio" else "DESC"
 
     conditions = ["zip_code IS NOT NULL"]
@@ -76,6 +81,16 @@ def search_neighborhoods(
         conditions.append(f"median_income >= {min_income}")
     if value_tier:
         conditions.append(f"value_tier = '{value_tier}'")
+    if min_population:
+        conditions.append(f"total_population >= {min_population}")
+    if max_population:
+        conditions.append(f"total_population <= {max_population}")
+    if pop_class:
+        conditions.append(f"pop_density_class = '{pop_class}'")
+    if min_safety:
+        conditions.append(f"safety_index >= {min_safety}")
+    if min_air_quality:
+        conditions.append(f"air_quality_index >= {min_air_quality}")
 
     where = " AND ".join(conditions)
 
@@ -89,10 +104,14 @@ def search_neighborhoods(
             academic_score, education_index,
             price_to_income_ratio, affordability_score,
             value_score, value_tier,
-            last_updated
+            safety_index, violent_crime_rate,
+            property_crime_rate, air_quality_index,
+            median_aqi, natural_amenity_score,
+            amenity_rank, total_population,
+            pop_density_class, last_updated
         FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
         WHERE {where}
-        ORDER BY {sort_by} {sort_direction}
+        ORDER BY {sort_by} {sort_direction} NULLS LAST
         LIMIT {limit}
     """
 
@@ -112,7 +131,6 @@ def get_neighborhood(zip_code: str):
         WHERE zip_code = '{zip_code}'
         LIMIT 1
     """
-
     try:
         results = run_query(sql)
         if not results:
