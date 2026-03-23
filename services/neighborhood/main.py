@@ -34,14 +34,27 @@ def health():
 
 @app.get("/neighborhoods/search")
 def search_neighborhoods(
-    q:              Optional[str]   = Query(None, description="City or zip code"),
-    state:          Optional[str]   = Query(None, description="State abbreviation e.g. TX"),
-    min_price:      Optional[float] = Query(None, description="Minimum ZHVI home value"),
-    max_price:      Optional[float] = Query(None, description="Maximum ZHVI home value"),
-    min_education:  Optional[float] = Query(None, description="Minimum education index 0-100"),
-    min_income:     Optional[float] = Query(None, description="Minimum median income"),
-    limit:          int             = Query(20,   description="Number of results"),
+    q:              Optional[str]   = Query(None),
+    state:          Optional[str]   = Query(None),
+    min_price:      Optional[float] = Query(None),
+    max_price:      Optional[float] = Query(None),
+    min_education:  Optional[float] = Query(None),
+    min_income:     Optional[float] = Query(None),
+    max_budget:     Optional[float] = Query(None),
+    value_tier:     Optional[str]   = Query(None),
+    sort_by:        str             = Query("value_score"),
+    limit:          int             = Query(20),
 ):
+    allowed_sorts = [
+        "value_score", "affordability_score", "zhvi_sfr",
+        "median_income", "education_index", "price_to_income_ratio"
+    ]
+    if sort_by not in allowed_sorts:
+        sort_by = "value_score"
+
+    # Price to income ratio sorts ascending (lower is better)
+    sort_direction = "ASC" if sort_by == "price_to_income_ratio" else "DESC"
+
     conditions = ["zip_code IS NOT NULL"]
 
     if q:
@@ -51,6 +64,8 @@ def search_neighborhoods(
         """)
     if state:
         conditions.append(f"UPPER(state) = UPPER('{state}')")
+    if max_budget:
+        conditions.append(f"zhvi_sfr <= {max_budget}")
     if min_price:
         conditions.append(f"zhvi_sfr >= {min_price}")
     if max_price:
@@ -59,30 +74,25 @@ def search_neighborhoods(
         conditions.append(f"education_index >= {min_education}")
     if min_income:
         conditions.append(f"median_income >= {min_income}")
+    if value_tier:
+        conditions.append(f"value_tier = '{value_tier}'")
 
     where = " AND ".join(conditions)
 
     sql = f"""
         SELECT
-            zip_code,
-            city,
-            state,
-            metro_area,
-            zhvi_sfr,
-            zhvi_sfrcondo,
-            zori_rent,
-            median_sale_price,
-            days_to_pending,
-            market_heat_index,
-            median_income,
-            owner_occupied_pct,
-            total_schools,
-            academic_score,
-            education_index,
+            zip_code, city, state, metro_area,
+            zhvi_sfr, zhvi_sfrcondo, zori_rent,
+            median_sale_price, days_to_pending,
+            market_heat_index, median_income,
+            owner_occupied_pct, total_schools,
+            academic_score, education_index,
+            price_to_income_ratio, affordability_score,
+            value_score, value_tier,
             last_updated
         FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
         WHERE {where}
-        ORDER BY zhvi_sfr DESC
+        ORDER BY {sort_by} {sort_direction}
         LIMIT {limit}
     """
 
@@ -157,8 +167,9 @@ def get_top_neighborhoods(
     limit:  int           = Query(10)
 ):
     allowed_metrics = [
-        "education_index", "academic_score", "median_income",
-        "owner_occupied_pct", "market_heat_index"
+    "education_index", "academic_score", "median_income",
+    "owner_occupied_pct", "market_heat_index",
+    "value_score", "affordability_score"
     ]
 
     if metric not in allowed_metrics:
