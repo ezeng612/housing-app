@@ -12,9 +12,9 @@ function fmt(n) {
 
 export default function MarketPredictor() {
   const [form, setForm] = useState({
-    zip_code: '78701', sqft: '1800', bedrooms: '3', bathrooms: '2',
+    zip_code: '10001', sqft: '2500', bedrooms: '3', bathrooms: '2',
     garage: true, year_built: '2005', condition: 'good',
-    property_type: 'single_family', stories: '1'
+    property_type: 'single_family', forecast_years: '0'
   })
   const [result,     setResult]     = useState(null)
   const [comps,      setComps]      = useState([])
@@ -23,34 +23,34 @@ export default function MarketPredictor() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  async function predict() {
-    setLoading(true)
-    setError(null)
-    setResult(null)
-    try {
-      const payload = {
-        zip_code:      form.zip_code,
-        sqft:          parseFloat(form.sqft),
-        bedrooms:      parseInt(form.bedrooms),
-        bathrooms:     parseFloat(form.bathrooms),
-        year_built:    parseInt(form.year_built),
-        condition:     form.condition,
-        property_type: form.property_type,
-        garage:        form.garage,
-        stories:       parseInt(form.stories),
-      }
-      const [prediction, comparables] = await Promise.all([
-        predictorApi.predict(payload),
-        predictorApi.getComparables(form.zip_code, 3),
-      ])
-      setResult(prediction)
-      setComps(comparables.comparables || [])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+async function predict() {
+  setLoading(true)
+  setError(null)
+  setResult(null)
+  try {
+    const payload = {
+      zip_code:       form.zip_code,
+      sqft:           parseFloat(form.sqft),
+      bedrooms:       parseInt(form.bedrooms),
+      bathrooms:      parseFloat(form.bathrooms),
+      year_built:     parseInt(form.year_built),
+      condition:      form.condition,
+      property_type:  form.property_type,
+      garage:         form.garage,
+      forecast_years: parseInt(form.forecast_years),
     }
+    const [prediction, comparables] = await Promise.all([
+      predictorApi.predict(payload),
+      predictorApi.getComparables(form.zip_code, 3),
+    ])
+    setResult(prediction)
+    setComps(comparables.comparables || [])
+  } catch (err) {
+    setError(err.message)
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="predictor">

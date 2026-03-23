@@ -267,15 +267,21 @@ export default function NeighborhoodExplorer() {
         </div>
 
         <div className="explorer__sort">
-          {SORT_OPTIONS.map(s => (
-            <button
-              key={s.key}
-              className={`sort-btn ${sortBy === s.key ? 'sort-btn--active' : ''}`}
-              onClick={() => setSortBy(s.key)}
-            >
-              {s.label}
-            </button>
-          ))}
+          <label style={{
+            fontSize: '11px', color: 'var(--sand-400)',
+            textTransform: 'uppercase', letterSpacing: '0.06em'
+          }}>
+            Sort by
+          </label>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{ fontSize: '13px', padding: '6px 10px', borderRadius: '8px', width: '100%' }}
+          >
+            {SORT_OPTIONS.map(s => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
         </div>
 
         <div className="explorer__list">

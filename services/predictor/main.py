@@ -58,7 +58,7 @@ class PropertyInput(BaseModel):
     condition:     str
     property_type: str
     garage:        bool = True
-    stories:       Optional[int] = 1
+    forecast_years: Optional[int] = 0
 
 class PredictionResponse(BaseModel):
     estimated_value:   float
@@ -72,6 +72,7 @@ class PredictionResponse(BaseModel):
     metro_area:        Optional[str]
     model_version:     str
     neighborhood_data: dict
+    forecast:          Optional[list] = None
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 
@@ -221,6 +222,42 @@ def estimate_value_fallback(prop: PropertyInput, neighborhood: dict) -> dict:
         'price_per_sqft':  round(estimate / prop.sqft, 2),
     }
 
+def calculate_forecast(base_value: float, recent_trends: list, years: int) -> list:
+    """
+    Project home value 1, 2, 3 years into the future
+    using recent price trend as the growth rate.
+    """
+    if not years or years <= 0:
+        return []
+
+    # Calculate annual growth rate from recent trends
+    annual_rate = 0.04  # default 4% if no trend data@app
+
+    if len(recent_trends) >= 12:
+        current  = recent_trends[-1].get('zhvi_sfr') or base_value
+        year_ago = recent_trends[-12].get('zhvi_sfr') or current
+        if year_ago and year_ago > 0:
+            annual_rate = (current - year_ago) / year_ago
+            # Clip to reasonable range — between -10% and +20%
+            annual_rate = max(-0.10, min(0.20, annual_rate))
+
+    forecast = []
+    for yr in range(1, years + 1):
+        projected = base_value * ((1 + annual_rate) ** yr)
+
+        # Widen confidence interval for further projections
+        margin = 0.06 + (yr - 1) * 0.03
+        forecast.append({
+            'year':          date.today().year + yr,
+            'projected_value': round(projected, -2),
+            'low_estimate':    round(projected * (1 - margin), -2),
+            'high_estimate':   round(projected * (1 + margin), -2),
+            'annual_rate_pct': round(annual_rate * 100, 1),
+            'total_gain_pct':  round(((projected - base_value) / base_value) * 100, 1),
+        })
+
+    return forecast
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -243,13 +280,19 @@ def predict(prop: PropertyInput):
 
     recent_trends = get_recent_trends(prop.zip_code)
 
-    model = get_model()
-    if model:
+    if get_model():
         result        = estimate_value_ml(prop, neighborhood, recent_trends)
         model_version = "xgboost-v2"
     else:
         result        = estimate_value_fallback(prop, neighborhood)
         model_version = "fallback"
+
+    # Calculate forecast if requested
+    forecast = calculate_forecast(
+        result['estimated_value'],
+        recent_trends,
+        prop.forecast_years or 0
+    )
 
     return PredictionResponse(
         **result,
@@ -258,6 +301,7 @@ def predict(prop: PropertyInput):
         state             = neighborhood.get('state'),
         metro_area        = neighborhood.get('metro_area'),
         model_version     = model_version,
+        forecast          = forecast if forecast else None,
         neighborhood_data = {
             'zhvi_sfr':           neighborhood.get('zhvi_sfr'),
             'median_income':      neighborhood.get('median_income'),
