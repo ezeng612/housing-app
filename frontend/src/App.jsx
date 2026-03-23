@@ -31,7 +31,6 @@ function Nav() {
           </NavLink>
         ))}
       </div>
-      <button className="nav__cta">Sign in</button>
     </nav>
   )
 }
