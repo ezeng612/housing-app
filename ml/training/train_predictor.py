@@ -32,6 +32,7 @@ def prepare_features(df):
         'metro_inventory', 'metro_pct_above_list',
         'price_yoy_pct', 'price_3mo_pct',
         'zori_rent', 'zhvi_sfrcondo',
+        'safety_index', 'air_quality_index', 'natural_amenity_score',
     ]
 
     # Encode state as categorical
