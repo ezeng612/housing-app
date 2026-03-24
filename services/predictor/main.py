@@ -82,9 +82,14 @@ def get_neighborhood_context(zip_code: str) -> dict:
             zip_code, city, state, metro_area,
             zhvi_sfr, zhvi_sfrcondo, zori_rent,
             median_sale_price, days_to_pending,
-            market_heat_index,
-            median_income, owner_occupied_pct,
-            education_index, academic_score, total_schools
+            market_heat_index, median_income,
+            owner_occupied_pct, education_index,
+            academic_score, total_schools,
+            safety_index, air_quality_index,
+            natural_amenity_score, value_score,
+            value_tier, affordability_score,
+            price_to_income_ratio, total_population,
+            pop_density_class
         FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
         WHERE zip_code = '{zip_code}'
         LIMIT 1
@@ -157,6 +162,9 @@ def estimate_value_ml(prop: PropertyInput, neighborhood: dict, recent_trends: li
         'price_3mo_pct':       price_3mo_pct,
         'zori_rent':           neighborhood.get('zori_rent')          or 1500,
         'zhvi_sfrcondo':       neighborhood.get('zhvi_sfrcondo')      or 300000,
+        'safety_index':        neighborhood.get('safety_index')       or 50,
+        'air_quality_index':   neighborhood.get('air_quality_index')  or 65,
+        'natural_amenity_score': neighborhood.get('natural_amenity_score') or 50,
         'state_encoded':       state_encoded,
     }
 
@@ -303,10 +311,17 @@ def predict(prop: PropertyInput):
         model_version     = model_version,
         forecast          = forecast if forecast else None,
         neighborhood_data = {
-            'zhvi_sfr':           neighborhood.get('zhvi_sfr'),
-            'median_income':      neighborhood.get('median_income'),
-            'education_index':    neighborhood.get('education_index'),
-            'owner_occupied_pct': neighborhood.get('owner_occupied_pct'),
+            'zhvi_sfr':              neighborhood.get('zhvi_sfr'),
+            'median_income':         neighborhood.get('median_income'),
+            'education_index':       neighborhood.get('education_index'),
+            'owner_occupied_pct':    neighborhood.get('owner_occupied_pct'),
+            'safety_index':          neighborhood.get('safety_index'),
+            'air_quality_index':     neighborhood.get('air_quality_index'),
+            'natural_amenity_score': neighborhood.get('natural_amenity_score'),
+            'value_tier':            neighborhood.get('value_tier'),
+            'value_score':           neighborhood.get('value_score'),
+            'pop_density_class':     neighborhood.get('pop_density_class'),
+            'total_population':      neighborhood.get('total_population'),
         }
     )
 
