@@ -125,7 +125,7 @@ export default function NeighborhoodExplorer() {
   const [state,         setState]         = useState('TX')
   const [sortBy,        setSortBy]        = useState('value_score')
   const [valueTier,     setValueTier]     = useState('')
-  const [popClass,      setPopClass]      = useState('suburban')
+  const [popClass,      setPopClass]      = useState('')
   const [maxBudget,     setMaxBudget]     = useState('')
   const [minSafety,     setMinSafety]     = useState('')
   const [minAirQuality, setMinAirQuality] = useState('')
