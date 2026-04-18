@@ -1,13 +1,12 @@
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
 import pandas as pd
-import io
+import os
 
 PROJECT_ID = "housing-app-490522"
+client     = bigquery.Client(project=PROJECT_ID)
 
 def build_training_dataset():
     print("Building training dataset from BigQuery...")
-
-    client = bigquery.Client(project=PROJECT_ID)
 
     sql = """
     SELECT
@@ -67,6 +66,7 @@ def build_training_dataset():
     df = client.query(sql).to_dataframe()
     print(f"Raw dataset: {len(df):,} rows, {len(df.columns)} columns")
 
+    # Drop rows where target is null
     df = df.dropna(subset=['home_value'])
     print(f"After dropping nulls: {len(df):,} rows")
 
@@ -79,6 +79,9 @@ if __name__ == "__main__":
     print("\nFeature stats:")
     print(df.describe())
 
+    # Save to GCS
+    from google.cloud import storage
+    import io
     client_gcs = storage.Client(project=PROJECT_ID)
     bucket     = client_gcs.bucket(f"{PROJECT_ID}-processed-data")
     blob       = bucket.blob("ml/training_data.csv")

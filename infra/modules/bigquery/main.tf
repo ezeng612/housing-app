@@ -92,21 +92,25 @@ resource "google_bigquery_table" "neighborhood_features" {
   project             = var.project_id
   deletion_protection = false
   schema = jsonencode([
-    { name = "zip_code",           type = "STRING",  mode = "REQUIRED" },
-    { name = "city",               type = "STRING",  mode = "NULLABLE" },
-    { name = "state",              type = "STRING",  mode = "NULLABLE" },
-    { name = "metro_area",         type = "STRING",  mode = "NULLABLE" },
-    { name = "zhvi_sfr",           type = "FLOAT64", mode = "NULLABLE" },
-    { name = "zhvi_sfrcondo",      type = "FLOAT64", mode = "NULLABLE" },
-    { name = "zori_rent",          type = "FLOAT64", mode = "NULLABLE" },
-    { name = "median_sale_price",  type = "FLOAT64", mode = "NULLABLE" },
-    { name = "days_to_pending",    type = "FLOAT64", mode = "NULLABLE" },
-    { name = "market_heat_index",  type = "FLOAT64", mode = "NULLABLE" },
-    { name = "median_income",      type = "FLOAT64", mode = "NULLABLE" },
-    { name = "owner_occupied_pct", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "total_schools",      type = "INT64",   mode = "NULLABLE" },
-    { name = "academic_score",     type = "FLOAT64", mode = "NULLABLE" },
-    { name = "education_index",    type = "FLOAT64", mode = "NULLABLE" },
-    { name = "last_updated",       type = "DATE",    mode = "REQUIRED" }
+    { name = "zip_code",              type = "STRING",  mode = "REQUIRED" },
+    { name = "city",                  type = "STRING",  mode = "NULLABLE" },
+    { name = "state",                 type = "STRING",  mode = "NULLABLE" },
+    { name = "metro_area",            type = "STRING",  mode = "NULLABLE" },
+    { name = "zhvi_sfr",              type = "FLOAT64", mode = "NULLABLE" },
+    { name = "zhvi_sfrcondo",         type = "FLOAT64", mode = "NULLABLE" },
+    { name = "zori_rent",             type = "FLOAT64", mode = "NULLABLE" },
+    { name = "median_sale_price",     type = "FLOAT64", mode = "NULLABLE" },
+    { name = "days_to_pending",       type = "FLOAT64", mode = "NULLABLE" },
+    { name = "market_heat_index",     type = "FLOAT64", mode = "NULLABLE" },
+    { name = "median_income",         type = "FLOAT64", mode = "NULLABLE" },
+    { name = "owner_occupied_pct",    type = "FLOAT64", mode = "NULLABLE" },
+    { name = "total_schools",         type = "INT64",   mode = "NULLABLE" },
+    { name = "academic_score",        type = "FLOAT64", mode = "NULLABLE" },
+    { name = "education_index",       type = "FLOAT64", mode = "NULLABLE" },
+    { name = "last_updated",          type = "DATE",    mode = "REQUIRED" }, 
+    { name = "price_to_income_ratio", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "affordability_score",   type = "FLOAT64", mode = "NULLABLE" },
+    { name = "value_score",           type = "FLOAT64", mode = "NULLABLE" },
+    { name = "value_tier",            type = "STRING",  mode = "NULLABLE" }
   ])
 }

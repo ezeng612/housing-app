@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Search, MapPin, Star, TrendingUp, Users,
   Shield, GraduationCap, Wind, TreePine,
-  Loader, SlidersHorizontal, Info
+  Loader, Info, ChevronRight, Home, SlidersHorizontal
 } from 'lucide-react'
 import { neighborhoodApi } from '../api/client'
+import NeighborhoodMap from '../components/NeighborhoodMap'
 import './NeighborhoodExplorer.css'
 
 const SORT_OPTIONS = [
@@ -14,25 +15,8 @@ const SORT_OPTIONS = [
   { key: 'air_quality_index',     label: 'Best air quality' },
   { key: 'natural_amenity_score', label: 'Best amenities' },
   { key: 'education_index',       label: 'Best schools' },
-  { key: 'zhvi_sfr',              label: 'Home value' },
-  { key: 'median_income',         label: 'Income' },
-]
-
-const VALUE_TIERS = [
-  { key: '',            label: 'All tiers' },
-  { key: 'Hidden gem',  label: 'Hidden gems' },
-  { key: 'Great value', label: 'Great value' },
-  { key: 'Fair market', label: 'Fair market' },
-  { key: 'Premium',     label: 'Premium' },
-  { key: 'Overpriced',  label: 'Overpriced' },
-]
-
-const POP_CLASSES = [
-  { key: '',           label: 'All sizes' },
-  { key: 'urban',      label: 'Urban (50K+)' },
-  { key: 'suburban',   label: 'Suburban (10K-50K)' },
-  { key: 'small_town', label: 'Small town (2.5K-10K)' },
-  { key: 'rural',      label: 'Rural (<2.5K)' },
+  { key: 'zhvi_sfr',              label: 'Highest value' },
+  { key: 'price_to_income_ratio', label: 'Most affordable (PTI)' },
 ]
 
 const TIER_COLORS = {
@@ -45,33 +29,17 @@ const TIER_COLORS = {
 }
 
 const METRICS_EXPLAINED = [
-  { label: 'Value score', desc: 'Composite score (0-100) combining affordability (25%), safety (20%), education (20%), air quality (15%), natural amenities (12%), and market tier (8%). Higher = better overall value.' },
-  { label: 'Affordability score', desc: 'How affordable homes are relative to local median income. 100 minus the price-to-income ratio scaled to 0-100. Higher = more affordable.' },
+  { label: 'Value score',           desc: 'Composite score (0-100) combining affordability (25%), safety (20%), education (20%), air quality (15%), natural amenities (12%), and market tier (8%).' },
+  { label: 'Affordability score',   desc: 'How affordable homes are relative to local median income. 100 minus the price-to-income ratio scaled to 0-100.' },
   { label: 'Price-to-income ratio', desc: 'Median home value divided by median household income. Under 3x is affordable, 3-5x is moderate, above 8x is expensive.' },
-  { label: 'Safety index', desc: 'Composite of violent and property crime rates per 100K residents from FBI Crime Data. Normalized to 0-100 where 100 = safest.' },
-  { label: 'Air quality index', desc: 'Based on EPA Annual AQI county data. Converted to 0-100 scale where 100 = cleanest air. AQI under 50 (Good) scores 75-100.' },
-  { label: 'Natural amenity score', desc: 'USDA Natural Amenities Scale measuring climate, topography, and water features. Converted from 1-7 rank to 0-100 score.' },
-  { label: 'Education index', desc: 'Composite of SEDA academic achievement scores (Stanford Education Data Archive) and school availability per zip code.' },
-  { label: 'Home value (ZHVI)', desc: 'Zillow Home Value Index — smoothed, seasonally adjusted estimate for single-family homes. Updated monthly.' },
-  { label: 'Monthly rent (ZORI)', desc: 'Zillow Observed Rent Index — average asking rent across all home types. Updated monthly.' },
-  { label: 'Median income', desc: 'Median household income from US Census Bureau ACS 5-Year Estimates (2024).' },
+  { label: 'Safety index',          desc: 'Composite of violent and property crime rates per 100K residents from FBI Crime Data. 100 = safest.' },
+  { label: 'Air quality index',     desc: 'Based on EPA Annual AQI county data. 100 = cleanest air. AQI under 50 scores 75-100.' },
+  { label: 'Natural amenity score', desc: 'USDA Natural Amenities Scale — climate, topography, and water features. Converted from 1-7 rank to 0-100.' },
+  { label: 'Education index',       desc: 'Composite of SEDA academic achievement scores and school availability per zip code.' },
+  { label: 'Home value (ZHVI)',     desc: 'Zillow Home Value Index — smoothed, seasonally adjusted estimate for single-family homes.' },
+  { label: 'Monthly rent (ZORI)',   desc: 'Zillow Observed Rent Index — average asking rent across all home types.' },
+  { label: 'Median income',         desc: 'Median household income from US Census Bureau ACS 5-Year Estimates (2024).' },
 ]
-
-function ScoreBar({ value, max = 100, color = '#2a9d8f' }) {
-  if (!value) return (
-    <div className="score-bar">
-      <div className="score-bar__fill" style={{ width: '0%' }} />
-    </div>
-  )
-  return (
-    <div className="score-bar">
-      <div className="score-bar__fill" style={{
-        width: `${Math.min(100, (value / max) * 100)}%`,
-        background: color
-      }} />
-    </div>
-  )
-}
 
 function fmt(n) {
   if (!n) return 'N/A'
@@ -82,8 +50,18 @@ function fmt(n) {
 
 function fmtPop(n) {
   if (!n) return 'N/A'
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
-  return n.toLocaleString()
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toLocaleString()
+}
+
+function ScoreBar({ value, max = 100, color = '#2a9d8f' }) {
+  return (
+    <div className="score-bar">
+      <div className="score-bar__fill" style={{
+        width: `${Math.min(100, ((value || 0) / max) * 100)}%`,
+        background: color
+      }} />
+    </div>
+  )
 }
 
 function TierBadge({ tier }) {
@@ -91,9 +69,8 @@ function TierBadge({ tier }) {
   const colors = TIER_COLORS[tier] || TIER_COLORS['Unknown']
   return (
     <span style={{
-      fontSize: '11px', padding: '3px 10px',
-      borderRadius: '99px', fontWeight: 500,
-      background: colors.bg, color: colors.text, flexShrink: 0,
+      fontSize: '11px', padding: '3px 10px', borderRadius: '99px',
+      fontWeight: 500, background: colors.bg, color: colors.text, flexShrink: 0,
     }}>
       {tier}
     </span>
@@ -111,9 +88,8 @@ function PopBadge({ cls }) {
   const c = map[cls] || map.rural
   return (
     <span style={{
-      fontSize: '11px', padding: '3px 8px',
-      borderRadius: '99px', fontWeight: 500,
-      background: c.bg, color: c.text, flexShrink: 0,
+      fontSize: '11px', padding: '3px 8px', borderRadius: '99px',
+      fontWeight: 500, background: c.bg, color: c.text, flexShrink: 0,
     }}>
       {c.label}
     </span>
@@ -121,41 +97,93 @@ function PopBadge({ cls }) {
 }
 
 export default function NeighborhoodExplorer() {
-  const [query,         setQuery]         = useState('')
-  const [state,         setState]         = useState('TX')
-  const [sortBy,        setSortBy]        = useState('value_score')
-  const [valueTier,     setValueTier]     = useState('')
-  const [popClass,      setPopClass]      = useState('')
-  const [maxBudget,     setMaxBudget]     = useState('')
-  const [minSafety,     setMinSafety]     = useState('')
-  const [minAirQuality, setMinAirQuality] = useState('')
-  const [showFilters,   setShowFilters]   = useState(false)
-  const [showMetrics,   setShowMetrics]   = useState(false)
-  const [neighborhoods, setNeighborhoods] = useState([])
-  const [selected,      setSelected]      = useState(null)
-  const [history,       setHistory]       = useState([])
-  const [loading,       setLoading]       = useState(false)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [error,         setError]         = useState(null)
+  const [query,           setQuery]           = useState('')
+  const [suggestions,     setSuggestions]     = useState([])
+  const [searchMode,      setSearchMode]      = useState(null)
+  const [selectedCity,    setSelectedCity]    = useState(null)
+  const [cityStats,       setCityStats]       = useState(null)
+  const [sortBy,          setSortBy]          = useState('value_score')
+  const [neighborhoods,   setNeighborhoods]   = useState([])
+  const [selected,        setSelected]        = useState(null)
+  const [history,         setHistory]         = useState([])
+  const [loading,         setLoading]         = useState(false)
+  const [searchLoading,   setSearchLoading]   = useState(false)
+  const [showMetrics,     setShowMetrics]     = useState(false)
+  const [error,           setError]           = useState(null)
+  const debounceRef = useRef(null)
 
-  useEffect(() => { loadNeighborhoods() }, [state, sortBy, valueTier, popClass])
+  // Debounced search — detects zip vs city
+  useEffect(() => {
+    if (!query || query.length < 2) {
+      setSuggestions([])
+      return
+    }
+    // Zip code — 5 digits
+    if (/^\d{5}$/.test(query.trim())) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => handleZipSearch(query.trim()), 300)
+      return
+    }
+    // City search
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      setSearchLoading(true)
+      try {
+        const data = await neighborhoodApi.searchCities(query)
+        setSuggestions(data.cities || [])
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 300)
+  }, [query])
 
-  async function loadNeighborhoods() {
+  // Reload when sort changes for city mode
+  useEffect(() => {
+    if (selectedCity && searchMode === 'city') {
+      loadCityNeighborhoods(selectedCity)
+    }
+  }, [sortBy])
+
+  async function handleZipSearch(zip) {
+    setSearchLoading(true)
+    setError(null)
+    setSuggestions([])
+    setSearchMode('zip')
+    try {
+      const data = await neighborhoodApi.getNeighborhood(zip)
+      if (data) {
+        setNeighborhoods([data])
+        setCityStats(null)
+        setSelectedCity(null)
+        await selectNeighborhood(data)
+      }
+    } catch {
+      setError(`Zip code ${zip} not found`)
+      setNeighborhoods([])
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  async function loadCityNeighborhoods(city) {
     setLoading(true)
     setError(null)
     try {
-      const params = { limit: 30, sort_by: sortBy }
-      if (state)         params.state      = state
-      if (query)         params.q          = query
-      if (maxBudget)     params.max_budget = parseFloat(maxBudget) * 1000
-      if (valueTier)     params.value_tier = valueTier
-      if (popClass)      params.pop_class  = popClass
-      if (minSafety)     params.min_safety = parseFloat(minSafety)
-      if (minAirQuality) params.min_air_quality = parseFloat(minAirQuality)
-      const data = await neighborhoodApi.search(params)
-      setNeighborhoods(data.results || [])
-      if (data.results?.length > 0 && !selected) {
-        selectNeighborhood(data.results[0])
+      const data = await neighborhoodApi.getCityNeighborhoods(
+        city.city, city.state, sortBy
+      )
+      setNeighborhoods(data.neighborhoods || [])
+      setCityStats({
+        zip_count:       data.zip_count,
+        avg_home_value:  data.avg_home_value,
+        avg_value_score: data.avg_value_score,
+        min_home_value:  data.min_home_value,
+        max_home_value:  data.max_home_value,
+      })
+      if (data.neighborhoods?.length > 0) {
+        await selectNeighborhood(data.neighborhoods[0])
       }
     } catch (err) {
       setError(err.message)
@@ -166,20 +194,33 @@ export default function NeighborhoodExplorer() {
 
   async function selectNeighborhood(nbhd) {
     setSelected(nbhd)
-    setDetailLoading(true)
     try {
       const hist = await neighborhoodApi.getPriceHistory(nbhd.zip_code, 24)
       setHistory(hist.history || [])
     } catch {
       setHistory([])
-    } finally {
-      setDetailLoading(false)
     }
   }
 
-  function handleSearch(e) {
-    e.preventDefault()
-    loadNeighborhoods()
+  function handleCitySelect(city) {
+    setSelectedCity(city)
+    setSearchMode('city')
+    setQuery(`${city.city}, ${city.state}`)
+    setSuggestions([])
+    setSelected(null)
+    loadCityNeighborhoods(city)
+  }
+
+  function handleClear() {
+    setQuery('')
+    setSuggestions([])
+    setSearchMode(null)
+    setSelectedCity(null)
+    setCityStats(null)
+    setNeighborhoods([])
+    setSelected(null)
+    setHistory([])
+    setError(null)
   }
 
   return (
@@ -188,178 +229,145 @@ export default function NeighborhoodExplorer() {
       {/* ── Sidebar ── */}
       <div className="explorer__sidebar">
 
-        <form onSubmit={handleSearch} className="explorer__search-wrap">
+        {/* Search */}
+        <div className="explorer__search-wrap" style={{ position: 'relative' }}>
           <Search size={16} className="explorer__search-icon" />
           <input
             className="explorer__search"
-            placeholder="Search city or zip code…"
+            placeholder="City name or 5-digit zip code…"
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
-        </form>
-
-        <div className="explorer__filters">
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <select
-              value={state}
-              onChange={e => { setState(e.target.value); setSelected(null) }}
-              style={{ flex: 1, fontSize: '13px', padding: '6px 10px', borderRadius: '8px' }}
-            >
-              <option value="">All states</option>
-              {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-                'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-                'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-                'VA','WA','WV','WI','WY'].map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+          {searchLoading && (
+            <Loader size={14} className="spin" style={{
+              position: 'absolute', right: '12px', top: '50%',
+              transform: 'translateY(-50%)', color: 'var(--teal-400)'
+            }} />
+          )}
+          {query && !searchLoading && (
             <button
-              type="button"
-              onClick={() => setShowFilters(f => !f)}
+              onClick={handleClear}
               style={{
-                padding: '6px 10px', borderRadius: '8px', fontSize: '12px',
-                background: showFilters ? 'var(--sand-900)' : 'transparent',
-                color: showFilters ? '#fff' : 'var(--sand-600)',
-                border: '1px solid var(--sand-200)',
-                display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer'
+                position: 'absolute', right: '12px', top: '50%',
+                transform: 'translateY(-50%)', background: 'none',
+                border: 'none', cursor: 'pointer', color: 'var(--sand-400)',
+                fontSize: '16px', lineHeight: 1, padding: 0
               }}
-            >
-              <SlidersHorizontal size={13} />
-              Filters
-            </button>
-          </div>
+            >×</button>
+          )}
 
-          {showFilters && (
-            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div>
-                <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Area type
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                  {POP_CLASSES.map(p => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => setPopClass(p.key)}
-                      style={{
-                        padding: '4px 10px', borderRadius: '99px', fontSize: '11px',
-                        fontWeight: 500, cursor: 'pointer',
-                        background: popClass === p.key ? 'var(--sand-900)' : 'transparent',
-                        color: popClass === p.key ? '#fff' : 'var(--sand-600)',
-                        border: '1px solid var(--sand-200)',
-                      }}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Value tier
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                  {VALUE_TIERS.map(t => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => setValueTier(t.key)}
-                      style={{
-                        padding: '4px 10px', borderRadius: '99px', fontSize: '11px',
-                        fontWeight: 500, cursor: 'pointer',
-                        background: valueTier === t.key ? 'var(--sand-900)' : 'transparent',
-                        color: valueTier === t.key ? '#fff' : 'var(--sand-600)',
-                        border: '1px solid var(--sand-200)',
-                      }}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Max budget ($K)
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g. 500 for $500K"
-                  value={maxBudget}
-                  onChange={e => setMaxBudget(e.target.value)}
-                  style={{ marginTop: '4px' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Min safety (0-100)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 60"
-                    value={minSafety}
-                    onChange={e => setMinSafety(e.target.value)}
-                    style={{ marginTop: '4px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Min air quality
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 50"
-                    value={minAirQuality}
-                    onChange={e => setMinAirQuality(e.target.value)}
-                    style={{ marginTop: '4px' }}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={loadNeighborhoods}
-                style={{
-                  padding: '8px', borderRadius: '8px', fontSize: '13px',
-                  background: 'var(--teal-400)', color: '#fff',
-                  border: 'none', cursor: 'pointer', fontWeight: 500
-                }}
-              >
-                Apply filters
-              </button>
+          {/* Autocomplete dropdown */}
+          {suggestions.length > 0 && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0,
+              background: '#fff', border: '1px solid var(--sand-200)',
+              borderRadius: 'var(--border-radius-md)', zIndex: 100,
+              boxShadow: 'var(--shadow-md)', overflow: 'hidden', marginTop: '4px'
+            }}>
+              {suggestions.map((c, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleCitySelect(c)}
+                  style={{
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between', width: '100%',
+                    padding: '10px 14px', background: 'transparent',
+                    border: 'none',
+                    borderBottom: i < suggestions.length - 1
+                      ? '1px solid var(--sand-100)' : 'none',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--sand-50)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--sand-900)' }}>
+                      {c.city}, {c.state}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--sand-400)' }}>
+                      {c.zip_count} zip code{c.zip_count !== 1 ? 's' : ''} · avg {fmt(c.avg_home_value)}
+                    </div>
+                  </div>
+                  <ChevronRight size={14} style={{ color: 'var(--sand-400)', flexShrink: 0 }} />
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        <div className="explorer__sort">
-          <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Sort by
-          </label>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={{ fontSize: '13px', padding: '6px 10px', borderRadius: '8px', width: '100%' }}
-          >
-            {SORT_OPTIONS.map(s => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
-          </select>
-        </div>
+        {/* City stats banner */}
+        {cityStats && selectedCity && (
+          <div style={{
+            padding: '12px 16px', background: 'var(--sand-100)',
+            borderBottom: '1px solid var(--sand-200)'
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--sand-900)', marginBottom: '6px' }}>
+              {selectedCity.city}, {selectedCity.state}
+              <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--sand-400)', marginLeft: '6px' }}>
+                Top {cityStats.zip_count} zip codes
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {[
+                ['Avg home value', fmt(cityStats.avg_home_value)],
+                ['Price range',    `${fmt(cityStats.min_home_value)} – ${fmt(cityStats.max_home_value)}`],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <div style={{ fontSize: '10px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--sand-800)' }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
+        {/* Sort dropdown */}
+        {neighborhoods.length > 0 && (
+          <div className="explorer__sort">
+            <label style={{ fontSize: '11px', color: 'var(--sand-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Sort by
+            </label>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              style={{ fontSize: '13px', padding: '6px 10px', borderRadius: '8px', width: '100%' }}
+            >
+              {SORT_OPTIONS.map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Neighborhood list */}
         <div className="explorer__list">
+          {!query && !loading && (
+            <div style={{
+              padding: '2rem 1rem', textAlign: 'center',
+              color: 'var(--sand-400)', fontSize: '13px',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: '0.75rem'
+            }}>
+              <Home size={32} strokeWidth={1} style={{ opacity: 0.4 }} />
+              <p style={{ margin: 0 }}>Search a city or zip code</p>
+              <p style={{ margin: 0, fontSize: '11px', opacity: 0.7 }}>
+                e.g. "Austin", "Newark NJ", or "78701"
+              </p>
+            </div>
+          )}
+
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
               <Loader size={24} className="spin" style={{ color: 'var(--teal-400)' }} />
             </div>
           )}
+
           {error && (
             <div style={{ padding: '1rem', color: 'var(--coral-400)', fontSize: '13px' }}>
-              Error: {error}
+              {error}
             </div>
           )}
+
           {!loading && neighborhoods.map(n => (
             <button
               key={n.zip_code}
@@ -368,9 +376,12 @@ export default function NeighborhoodExplorer() {
             >
               <div className="nbhd-card__top">
                 <div style={{ minWidth: 0 }}>
-                  <div className="nbhd-card__name">{n.city || n.zip_code}</div>
+                  <div className="nbhd-card__name">
+                    {searchMode === 'city' ? n.zip_code : (n.city || n.zip_code)}
+                  </div>
                   <div className="nbhd-card__city">
-                    <MapPin size={11} /> {n.zip_code} · {n.state}
+                    <MapPin size={11} />
+                    {searchMode === 'city' ? n.state : `${n.zip_code} · ${n.state}`}
                   </div>
                 </div>
                 <div className="nbhd-card__score">
@@ -389,16 +400,41 @@ export default function NeighborhoodExplorer() {
         </div>
       </div>
 
+      {/* ── Map ── */}
+      <div className="explorer__map">
+        {neighborhoods.length > 0 ? (
+          <NeighborhoodMap
+            neighborhoods={neighborhoods}
+            selected={selected}
+            onSelect={selectNeighborhood}
+          />
+        ) : (
+          <div style={{
+            width: '100%', height: '100%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexDirection: 'column', gap: '1rem',
+            color: 'var(--sand-300)', background: 'var(--sand-50)'
+          }}>
+            <MapPin size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
+            <p style={{ margin: 0, fontSize: '13px' }}>Search a city to see it on the map</p>
+          </div>
+        )}
+      </div>
+
       {/* ── Detail panel ── */}
       <div className="explorer__detail">
-        {!selected && !loading && (
+        {!selected && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             height: '100%', color: 'var(--sand-400)',
             flexDirection: 'column', gap: '1rem'
           }}>
             <MapPin size={40} strokeWidth={1} />
-            <p>Select a neighborhood from the list</p>
+            <p style={{ margin: 0 }}>
+              {neighborhoods.length > 0
+                ? 'Select a neighborhood from the list'
+                : 'Search for a city or zip code to get started'}
+            </p>
           </div>
         )}
 
@@ -413,16 +449,22 @@ export default function NeighborhoodExplorer() {
               color: 'var(--sand-600)', lineHeight: '1.6'
             }}>
               Data covers <strong>metropolitan and suburban zip codes</strong> with available
-              Zillow ZHVI data. Rural areas may have limited coverage. All metrics reflect
-              zip code level aggregates, not individual properties.
+              Zillow ZHVI data. All metrics reflect zip code level aggregates, not individual properties.
             </div>
 
             {/* Header */}
             <div className="detail__header">
               <div>
-                <h1 className="detail__name">{selected.city || selected.zip_code}</h1>
+                <h1 className="detail__name">
+                  {selected.city || selected.zip_code}
+                  {selected.city && (
+                    <span style={{ fontSize: '16px', fontWeight: 400, color: 'var(--sand-400)', marginLeft: '8px' }}>
+                      {selected.zip_code}
+                    </span>
+                  )}
+                </h1>
                 <p className="detail__city">
-                  <MapPin size={14} /> {selected.zip_code} · {selected.state}
+                  <MapPin size={14} /> {selected.state}
                   {selected.metro_area ? ` · ${selected.metro_area.split(',')[0]}` : ''}
                 </p>
                 <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
@@ -467,24 +509,22 @@ export default function NeighborhoodExplorer() {
               </div>
             </div>
 
-            {/* Quality of life scores */}
+            {/* Quality scores */}
             <div style={{
               display: 'grid', gridTemplateColumns: '1fr 1fr',
               gap: '10px', marginBottom: '1.5rem'
             }}>
               {[
-                { label: 'Value score',      value: selected.value_score,           icon: Star,          color: '#2a9d8f' },
-                { label: 'Affordability',    value: selected.affordability_score,   icon: TrendingUp,    color: '#2a9d8f' },
-                { label: 'Safety',           value: selected.safety_index,          icon: Shield,        color: '#639922' },
-                { label: 'Air quality',      value: selected.air_quality_index,     icon: Wind,          color: '#185fa5' },
-                { label: 'Education',        value: selected.education_index,       icon: GraduationCap, color: '#534ab7' },
-                { label: 'Natural amenities',value: selected.natural_amenity_score, icon: TreePine,      color: '#3b6d11' },
+                { label: 'Value score',       value: selected.value_score,           icon: Star,          color: '#2a9d8f' },
+                { label: 'Affordability',     value: selected.affordability_score,   icon: TrendingUp,    color: '#2a9d8f' },
+                { label: 'Safety',            value: selected.safety_index,          icon: Shield,        color: '#639922' },
+                { label: 'Air quality',       value: selected.air_quality_index,     icon: Wind,          color: '#185fa5' },
+                { label: 'Education',         value: selected.education_index,       icon: GraduationCap, color: '#534ab7' },
+                { label: 'Natural amenities', value: selected.natural_amenity_score, icon: TreePine,      color: '#3b6d11' },
               ].map(({ label, value, icon: Icon, color }) => (
                 <div key={label} style={{
-                  padding: '12px 14px',
-                  background: 'var(--sand-50)',
-                  borderRadius: 'var(--border-radius-md)',
-                  border: '1px solid var(--sand-100)'
+                  padding: '12px 14px', background: 'var(--sand-50)',
+                  borderRadius: 'var(--border-radius-md)', border: '1px solid var(--sand-100)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                     <Icon size={13} style={{ color }} />
@@ -581,10 +621,9 @@ export default function NeighborhoodExplorer() {
                 onClick={() => setShowMetrics(m => !m)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
-                  fontSize: '12px', fontWeight: 500,
-                  color: 'var(--sand-600)', background: 'transparent',
-                  border: 'none', cursor: 'pointer', padding: '0',
-                  marginBottom: showMetrics ? '12px' : '0'
+                  fontSize: '12px', fontWeight: 500, color: 'var(--sand-600)',
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  padding: '0', marginBottom: showMetrics ? '12px' : '0'
                 }}
               >
                 <Info size={13} />
@@ -593,10 +632,8 @@ export default function NeighborhoodExplorer() {
 
               {showMetrics && (
                 <div style={{
-                  padding: '1.25rem',
-                  background: 'var(--sand-50)',
-                  borderRadius: 'var(--border-radius-lg)',
-                  border: '1px solid var(--sand-100)'
+                  padding: '1.25rem', background: 'var(--sand-50)',
+                  borderRadius: 'var(--border-radius-lg)', border: '1px solid var(--sand-100)'
                 }}>
                   {METRICS_EXPLAINED.map(({ label, desc }) => (
                     <div key={label} style={{
@@ -616,13 +653,6 @@ export default function NeighborhoodExplorer() {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Map placeholder */}
-            <div className="detail__map-placeholder">
-              <MapPin size={28} strokeWidth={1} />
-              <p>Interactive map coming soon via Mapbox</p>
-              <span>Will show zip code boundaries and nearby neighborhoods</span>
             </div>
 
           </div>

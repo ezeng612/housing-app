@@ -1,8 +1,14 @@
 .explorer {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  height: calc(100vh - var(--nav-h));
+  grid-template-columns: 320px 1fr 380px;
+  grid-template-rows: calc(100vh - var(--nav-h));
   overflow: hidden;
+}
+
+.explorer__map {
+  position: relative;
+  overflow: hidden;
+  background: var(--sand-50);
 }
 
 .explorer__sidebar {

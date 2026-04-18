@@ -16,10 +16,10 @@ export default function MarketPredictor() {
     garage: true, year_built: '2005', condition: 'good',
     property_type: 'single_family', forecast_years: '0'
   })
-  const [result,     setResult]     = useState(null)
-  const [comps,      setComps]      = useState([])
-  const [loading,    setLoading]    = useState(false)
-  const [error,      setError]      = useState(null)
+  const [result, setResult] = useState(null)
+  const [comps, setComps] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -172,16 +172,24 @@ async function predict() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '1.5rem' }}>
               {[
-                ['Price per sqft',   `$${result.price_per_sqft?.toFixed(0)}`],
-                ['City',             result.city || 'N/A'],
-                ['Metro area',       result.metro_area?.split(',')[0] || 'N/A'],
-                ['Median income',    fmt(result.neighborhood_data?.median_income)],
-                ['Education index',  result.neighborhood_data?.education_index?.toFixed(1) || 'N/A'],
-                ['Owner occupied',   result.neighborhood_data?.owner_occupied_pct ? `${result.neighborhood_data.owner_occupied_pct}%` : 'N/A'],
+                ['Price per sqft',      `$${result.price_per_sqft?.toFixed(0)}`],
+                ['City',                result.city || 'N/A'],
+                ['Metro area',          result.metro_area?.split(',')[0] || 'N/A'],
+                ['Area type',           result.neighborhood_data?.pop_density_class || 'N/A'],
+                ['Value tier',          result.neighborhood_data?.value_tier || 'N/A'],
+                ['Value score',         result.neighborhood_data?.value_score?.toFixed(1) || 'N/A'],
+                ['Median income',       fmt(result.neighborhood_data?.median_income)],
+                ['Education index',     result.neighborhood_data?.education_index?.toFixed(1) || 'N/A'],
+                ['Safety index',        result.neighborhood_data?.safety_index?.toFixed(1) || 'N/A'],
+                ['Air quality',         result.neighborhood_data?.air_quality_index?.toFixed(1) || 'N/A'],
+                ['Natural amenities',   result.neighborhood_data?.natural_amenity_score?.toFixed(1) || 'N/A'],
+                ['Population',          result.neighborhood_data?.total_population
+                                          ? `${(result.neighborhood_data.total_population/1000).toFixed(1)}K`
+                                          : 'N/A'],
               ].map(([label, value]) => (
                 <div key={label} style={{
                   padding: '10px 14px', background: 'var(--sand-50)',
-                  borderRadius: 'var(--radius-md)', border: '1px solid var(--sand-100)'
+                  borderRadius: 'var(--border-radius-md)', border: '1px solid var(--sand-100)'
                 }}>
                   <div style={{ fontSize: '11px', color: 'var(--sand-400)', marginBottom: '2px' }}>{label}</div>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--sand-800)' }}>{value}</div>

@@ -5,6 +5,7 @@ substitutions:
   _PREDICTOR_API: https://predictor-svc-262793354273.us-east1.run.app
   _DASHBOARD_API: https://dashboard-svc-262793354273.us-east1.run.app
   _RECOMMENDER_API: https://recommender-svc-262793354273.us-east1.run.app
+  _MAPBOX_TOKEN: MAPBOX_TOKEN_PLACEHOLDER
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
@@ -43,6 +44,8 @@ steps:
       - 'VITE_DASHBOARD_API=${_DASHBOARD_API}'
       - '--build-arg'
       - 'VITE_RECOMMENDER_API=${_RECOMMENDER_API}'
+      - '--build-arg'
+      - 'VITE_MAPBOX_TOKEN=${_MAPBOX_TOKEN}'
       - '-t'
       - 'us-east1-docker.pkg.dev/${_PROJECT}/housing-app/frontend:latest'
       - './frontend'
