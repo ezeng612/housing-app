@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { neighborhoodApi } from '../api/client'
 import './NeighborhoodExplorer.css'
-import Map, { NavigationControl } from 'react-map-gl'
+import Map, { NavigationControl, Marker } from 'react-map-gl'
 
 const SORT_OPTIONS = [
   { key: 'value_score',           label: 'Best value' },
