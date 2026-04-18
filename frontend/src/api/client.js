@@ -79,15 +79,6 @@ export const dashboardApi = {
     return fetchJSON(`${DASHBOARD_API}/dashboard/price-trends?${query}`)
   },
 
-  getNeighborhood: (zipCode) =>
-    fetchJSON(`${NEIGHBORHOOD_API}/neighborhoods/${zipCode}`),
-
-  searchCities: (q, limit = 10) =>
-    fetchJSON(`${NEIGHBORHOOD_API}/cities/search?q=${encodeURIComponent(q)}&limit=${limit}`),
-
-  getCityNeighborhoods: (city, state, sortBy = 'value_score', limit = 20) =>
-    fetchJSON(`${NEIGHBORHOOD_API}/cities/${encodeURIComponent(city)}/${state}/neighborhoods?sort_by=${sortBy}&limit=${limit}`),
-
   getMetros: (params = {}) => {
     const query = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v != null))

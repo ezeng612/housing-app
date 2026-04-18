@@ -8,8 +8,8 @@ app = FastAPI(title="Neighborhood Explorer API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://frontend-262793354273.us-east1.run.app"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -98,16 +98,17 @@ def search_neighborhoods(
         SELECT
             zip_code, city, state, metro_area,
             zhvi_sfr, zhvi_sfrcondo, zori_rent,
-            median_income, owner_occupied_pct,
-            education_index, academic_score,
+            median_sale_price, days_to_pending,
+            market_heat_index, median_income,
+            owner_occupied_pct, total_schools,
+            academic_score, education_index,
+            price_to_income_ratio, affordability_score,
+            value_score, value_tier,
             safety_index, violent_crime_rate,
             property_crime_rate, air_quality_index,
             median_aqi, natural_amenity_score,
-            price_to_income_ratio, affordability_score,
-            value_score, value_tier,
-            total_population, pop_density_class,
-            latitude, longitude,
-            last_updated
+            amenity_rank, total_population,
+            pop_density_class, last_updated
         FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
         WHERE {where}
         ORDER BY {sort_by} {sort_direction} NULLS LAST
@@ -251,98 +252,5 @@ def get_metros(
     try:
         results = run_query(sql)
         return {"count": len(results), "results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-# ── City search ───────────────────────────────────────────────────────────────
-
-@app.get("/cities/search")
-def search_cities(q: str = Query(...), limit: int = Query(10)):
-    sql = f"""
-        SELECT
-            city,
-            state,
-            COUNT(*)                    AS zip_count,
-            ROUND(AVG(zhvi_sfr), 0)     AS avg_home_value,
-            ROUND(AVG(value_score), 1)  AS avg_value_score,
-            ROUND(MIN(zhvi_sfr), 0)     AS min_home_value,
-            ROUND(MAX(zhvi_sfr), 0)     AS max_home_value
-        FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
-        WHERE LOWER(city) LIKE LOWER('%{q}%')
-        AND city IS NOT NULL
-        AND zhvi_sfr IS NOT NULL
-        GROUP BY city, state
-        HAVING COUNT(*) >= 1
-        ORDER BY zip_count DESC
-        LIMIT {limit}
-    """
-    try:
-        results = run_query(sql)
-        return {"cities": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/cities/{city}/{state}/neighborhoods")
-def get_city_neighborhoods(
-    city:    str,
-    state:   str,
-    sort_by: str = Query("value_score"),
-    limit:   int = Query(20),
-):
-    allowed_sorts = [
-        "value_score", "affordability_score", "zhvi_sfr",
-        "median_income", "education_index", "safety_index",
-        "air_quality_index", "natural_amenity_score",
-        "price_to_income_ratio"
-    ]
-    if sort_by not in allowed_sorts:
-        sort_by = "value_score"
-    sort_dir = "ASC" if sort_by == "price_to_income_ratio" else "DESC"
-
-    sql = f"""
-        SELECT
-            zip_code, city, state, metro_area,
-            zhvi_sfr, zhvi_sfrcondo, zori_rent,
-            median_income, owner_occupied_pct,
-            education_index, academic_score,
-            safety_index, violent_crime_rate,
-            property_crime_rate, air_quality_index,
-            median_aqi, natural_amenity_score,
-            price_to_income_ratio, affordability_score,
-            value_score, value_tier,
-            total_population, pop_density_class,
-            latitude, longitude,
-            last_updated
-        FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
-        WHERE LOWER(city)  = LOWER('{city}')
-        AND   UPPER(state) = UPPER('{state}')
-        AND   zhvi_sfr IS NOT NULL
-        ORDER BY {sort_by} {sort_dir} NULLS LAST
-        LIMIT {limit}
-    """
-    try:
-        results = run_query(sql)
-        if not results:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No neighborhoods found for {city}, {state}"
-            )
-        avg_value   = sum(r['zhvi_sfr'] or 0 for r in results) / len(results)
-        avg_score   = sum(r['value_score'] or 0 for r in results) / len(results)
-        min_value   = min(r['zhvi_sfr'] or 0 for r in results)
-        max_value   = max(r['zhvi_sfr'] or 0 for r in results)
-        return {
-            "city":           city,
-            "state":          state,
-            "zip_count":      len(results),
-            "avg_home_value": round(avg_value, 0),
-            "avg_value_score":round(avg_score, 1),
-            "min_home_value": round(min_value, 0),
-            "max_home_value": round(max_value, 0),
-            "neighborhoods":  results
-        }
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
