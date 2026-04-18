@@ -29,10 +29,9 @@ const VALUE_TIERS = [
 
 const POP_CLASSES = [
   { key: '',           label: 'All sizes' },
-  { key: 'urban',      label: 'Urban (50K+)' },
-  { key: 'suburban',   label: 'Suburban (10K-50K)' },
-  { key: 'small_town', label: 'Small town (2.5K-10K)' },
-  { key: 'rural',      label: 'Rural (<2.5K)' },
+  { key: 'urban',      label: 'Urban' },
+  { key: 'suburban',   label: 'Suburban' },
+  { key: 'rural',      label: 'Rural' },
 ]
 
 const TIER_COLORS = {
@@ -104,7 +103,6 @@ function PopBadge({ cls }) {
   const map = {
     urban:      { label: 'Urban',      bg: '#e6f1fb', text: '#185fa5' },
     suburban:   { label: 'Suburban',   bg: '#eeedfe', text: '#534ab7' },
-    small_town: { label: 'Small town', bg: '#faeeda', text: '#854f0b' },
     rural:      { label: 'Rural',      bg: '#eaf3de', text: '#3b6d11' },
   }
   const c = map[cls] || map.rural
@@ -650,46 +648,37 @@ export default function NeighborhoodExplorer() {
               >
                 <NavigationControl position="top-right" />
                 {selected.longitude && selected.latitude && (
-                  <>
-                    {/* Pulse ring */}
+                  <Marker
+                    longitude={selected.longitude}
+                    latitude={selected.latitude}
+                    anchor="bottom"
+                  >
                     <div style={{
-                      position: 'absolute',
-                      left: '50%', top: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      pointerEvents: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', pointerEvents: 'none'
                     }}>
                       <div style={{
-                        width: '48px', height: '48px',
-                        borderRadius: '50%',
-                        background: 'rgba(42, 157, 143, 0.15)',
-                        border: '2px solid rgba(42, 157, 143, 0.4)',
-                        position: 'absolute',
-                      }} />
-                      <MapPin size={32} style={{ color: '#2a9d8f', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} fill="#2a9d8f" strokeWidth={1} />
+                        background: 'rgba(255,255,255,0.92)',
+                        backdropFilter: 'blur(4px)',
+                        borderRadius: '99px',
+                        padding: '3px 10px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#1a1a1a',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                        whiteSpace: 'nowrap',
+                        marginBottom: '4px',
+                      }}>
+                        {selected.city ? `${selected.city}, ${selected.state}` : selected.zip_code} · {selected.zip_code}
+                      </div>
+                      <MapPin
+                        size={32}
+                        style={{ color: '#2a9d8f', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                        fill="#2a9d8f"
+                        strokeWidth={1}
+                      />
                     </div>
-
-                    {/* Zip code label */}
-                    <div style={{
-                      position: 'absolute',
-                      left: '50%', top: 'calc(50% + 28px)',
-                      transform: 'translateX(-50%)',
-                      pointerEvents: 'none',
-                      background: 'rgba(255,255,255,0.92)',
-                      backdropFilter: 'blur(4px)',
-                      borderRadius: '99px',
-                      padding: '3px 10px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#1a1a1a',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {selected.city ? `${selected.city}, ${selected.state}` : selected.zip_code} · {selected.zip_code}
-                    </div>
-                  </>
+                  </Marker>
                 )}
               </Map>
             </div>
