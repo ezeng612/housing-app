@@ -48,6 +48,7 @@ def search_neighborhoods(
     min_safety:     Optional[float] = Query(None),
     min_air_quality:Optional[float] = Query(None),
     sort_by:        str             = Query("value_score"),
+    sort_dir:       Optional[str]   = Query(None),
     limit:          int             = Query(20),
 ):
     allowed_sorts = [
@@ -58,7 +59,10 @@ def search_neighborhoods(
     if sort_by not in allowed_sorts:
         sort_by = "value_score"
 
-    sort_direction = "ASC" if sort_by == "price_to_income_ratio" else "DESC"
+    if sort_dir and sort_dir.upper() in ['ASC', 'DESC']:
+        sort_direction = sort_dir.upper()
+    else:
+        sort_direction = "ASC" if sort_by == "price_to_income_ratio" else "DESC"
 
     conditions = ["zip_code IS NOT NULL"]
 

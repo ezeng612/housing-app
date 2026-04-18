@@ -15,8 +15,9 @@ const SORT_OPTIONS = [
   { key: 'air_quality_index',     label: 'Best air quality' },
   { key: 'natural_amenity_score', label: 'Best amenities' },
   { key: 'education_index',       label: 'Best schools' },
-  { key: 'zhvi_sfr',              label: 'Home value' },
-  { key: 'median_income',         label: 'Income' },
+  { key: 'zhvi_sfr_desc',         label: 'Home value (high to low)' },
+  { key: 'zhvi_sfr_asc',          label: 'Home value (low to high)' },
+  { key: 'price_to_income_ratio', label: 'Most affordable (PTI)' },
 ]
 
 const VALUE_TIERS = [
@@ -147,7 +148,7 @@ export default function NeighborhoodExplorer() {
     setLoading(true)
     setError(null)
     try {
-      const params = { limit: 30, sort_by: sortBy }
+      const params = { limit: 30, sort_by: sortBy.replace('_desc', '').replace('_asc', ''), sort_dir: sortBy.endsWith('_asc') ? 'asc' : 'desc' }
       if (state)         params.state      = state
       if (query)         params.q          = query
       if (maxBudget)     params.max_budget = parseFloat(maxBudget) * 1000
@@ -413,7 +414,7 @@ export default function NeighborhoodExplorer() {
             flexDirection: 'column', gap: '1rem'
           }}>
             <MapPin size={40} strokeWidth={1} />
-            <p>Select a state and then a city or zip code in the search bar</p>
+            <p style={{ textAlign: 'center' }}>Select a state and then a city or zip code in the search bar</p>
           </div>
         )}
 
