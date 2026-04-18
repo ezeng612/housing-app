@@ -419,7 +419,7 @@ export default function NeighborhoodExplorer() {
         )}
 
         {selected && (
-          <div className="animate-fadeIn" key={selected.zip_code}>
+          <div className="animate-fadeIn" key={selected.zip_code} style={{ width: '100%' }}>
 
             {/* Coverage notice */}
             <div style={{
