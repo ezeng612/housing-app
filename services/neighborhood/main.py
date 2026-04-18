@@ -7,13 +7,11 @@ import os
 app = FastAPI(title="Neighborhood Explorer API", version="1.0.0")
 
 app.add_middleware(
-    app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
-)
 )
 
 PROJECT_ID = os.getenv("PROJECT_ID", "housing-app-490522")
