@@ -373,7 +373,7 @@ export default function NeighborhoodExplorer() {
               alignItems: 'center', gap: '0.75rem'
             }}>
               <MapPin size={32} strokeWidth={1} style={{ opacity: 0.4 }} />
-              <p style={{ margin: 0 }}>Select a state or search a city or zip code to get started</p>
+              <p style={{ margin: 0 }}>Select a state and then search a city or zip code to get started</p>
             </div>
           )}
           {!loading && neighborhoods.map(n => (
@@ -409,12 +409,13 @@ export default function NeighborhoodExplorer() {
       <div className="explorer__detail">
         {!selected && !loading && (
           <div style={{
+            flex: 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: '100%', color: 'var(--sand-400)',
+            color: 'var(--sand-400)',
             flexDirection: 'column', gap: '1rem'
           }}>
             <MapPin size={40} strokeWidth={1} />
-            <p>Select a neighborhood from the list</p>
+            <p>Select a state and then a city or zip code in the search bar</p>
           </div>
         )}
 
