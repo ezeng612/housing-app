@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { neighborhoodApi } from '../api/client'
 import './NeighborhoodExplorer.css'
+import Map, { NavigationControl } from 'react-map-gl'
 
 const SORT_OPTIONS = [
   { key: 'value_score',           label: 'Best value' },
@@ -19,12 +20,11 @@ const SORT_OPTIONS = [
 ]
 
 const VALUE_TIERS = [
-  { key: '',            label: 'All tiers' },
-  { key: 'Hidden gem',  label: 'Hidden gems' },
-  { key: 'Great value', label: 'Great value' },
-  { key: 'Fair market', label: 'Fair market' },
-  { key: 'Premium',     label: 'Premium' },
-  { key: 'Overpriced',  label: 'Overpriced' },
+  { key: '',                label: 'All tiers' },
+  { key: 'Excellent value', label: 'Excellent value' },
+  { key: 'Good value',      label: 'Good value' },
+  { key: 'Fair value',      label: 'Fair value' },
+  { key: 'Poor value',      label: 'Poor value' },
 ]
 
 const POP_CLASSES = [
@@ -36,12 +36,11 @@ const POP_CLASSES = [
 ]
 
 const TIER_COLORS = {
-  'Hidden gem':  { bg: '#e1f5ee', text: '#0f6e56' },
-  'Great value': { bg: '#eaf3de', text: '#3b6d11' },
-  'Fair market': { bg: '#faeeda', text: '#854f0b' },
-  'Premium':     { bg: '#faece7', text: '#993c1d' },
-  'Overpriced':  { bg: '#fcebeb', text: '#a32d2d' },
-  'Unknown':     { bg: '#f1efe8', text: '#5f5e5a' },
+  'Excellent value': { bg: '#e1f5ee', text: '#0f6e56' },
+  'Good value':      { bg: '#eaf3de', text: '#3b6d11' },
+  'Fair value':      { bg: '#faeeda', text: '#854f0b' },
+  'Poor value':      { bg: '#fcebeb', text: '#a32d2d' },
+  'Unknown':         { bg: '#f1efe8', text: '#5f5e5a' },
 }
 
 const METRICS_EXPLAINED = [
@@ -618,11 +617,30 @@ export default function NeighborhoodExplorer() {
               )}
             </div>
 
-            {/* Map placeholder */}
-            <div className="detail__map-placeholder">
-              <MapPin size={28} strokeWidth={1} />
-              <p>Interactive map coming soon via Mapbox</p>
-              <span>Will show zip code boundaries and nearby neighborhoods</span>
+            {/* Mapbox map */}
+            <div style={{ height: '300px', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem' }}>
+              <Map
+                initialViewState={{
+                  longitude: selected.longitude || -98.5795,
+                  latitude:  selected.latitude  || 39.8283,
+                  zoom:      selected.longitude ? 11 : 3.5,
+                }}
+                mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+                mapStyle="mapbox://styles/mapbox/light-v11"
+                style={{ width: '100%', height: '100%' }}
+              >
+                <NavigationControl position="top-right" />
+                {selected.longitude && selected.latitude && (
+                  <div style={{
+                    position: 'absolute',
+                    left: '50%', top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none'
+                  }}>
+                    <MapPin size={28} style={{ color: '#2a9d8f' }} fill="#2a9d8f" strokeWidth={1} />
+                  </div>
+                )}
+              </Map>
             </div>
 
           </div>
