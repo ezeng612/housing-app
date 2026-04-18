@@ -121,7 +121,7 @@ function PopBadge({ cls }) {
 
 export default function NeighborhoodExplorer() {
   const [query,         setQuery]         = useState('')
-  const [state,         setState]         = useState('TX')
+  const [state,         setState]         = useState('')
   const [sortBy,        setSortBy]        = useState('value_score')
   const [valueTier,     setValueTier]     = useState('')
   const [popClass,      setPopClass]      = useState('')
@@ -137,9 +137,15 @@ export default function NeighborhoodExplorer() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [error,         setError]         = useState(null)
 
-  useEffect(() => { loadNeighborhoods() }, [state, sortBy, valueTier, popClass])
+  useEffect(() => {
+    if (state) loadNeighborhoods()
+  }, [state, sortBy, valueTier, popClass])
 
   async function loadNeighborhoods() {
+    if (!state && !query) {
+      setNeighborhoods([])
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -357,6 +363,17 @@ export default function NeighborhoodExplorer() {
           {error && (
             <div style={{ padding: '1rem', color: 'var(--coral-400)', fontSize: '13px' }}>
               Error: {error}
+            </div>
+          )}
+          {!loading && !state && neighborhoods.length === 0 && (
+            <div style={{
+              padding: '2rem 1rem', textAlign: 'center',
+              color: 'var(--sand-400)', fontSize: '13px',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: '0.75rem'
+            }}>
+              <MapPin size={32} strokeWidth={1} style={{ opacity: 0.4 }} />
+              <p style={{ margin: 0 }}>Select a state or search a city or zip code to get started</p>
             </div>
           )}
           {!loading && neighborhoods.map(n => (
@@ -618,7 +635,7 @@ export default function NeighborhoodExplorer() {
             </div>
 
             {/* Mapbox map */}
-            <div style={{ height: '600px', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem', position: 'relative' }}>
+            <div style={{ height: '45vh', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem', position: 'relative' }}>
               <Map
                 key={selected.zip_code}
                 initialViewState={{
