@@ -1,6 +1,6 @@
 .explorer {
   display: grid;
-  grid-template-columns: 320px 1fr 380px;
+  grid-template-columns: 22% 1fr 28%;
   grid-template-rows: calc(100vh - var(--nav-h));
   overflow: hidden;
 }
