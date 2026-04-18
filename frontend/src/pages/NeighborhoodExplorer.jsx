@@ -618,27 +618,60 @@ export default function NeighborhoodExplorer() {
             </div>
 
             {/* Mapbox map */}
-            <div style={{ height: '300px', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem' }}>
+            <div style={{ height: '420px', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem', position: 'relative' }}>
               <Map
+                key={selected.zip_code}
                 initialViewState={{
                   longitude: selected.longitude || -98.5795,
                   latitude:  selected.latitude  || 39.8283,
-                  zoom:      selected.longitude ? 11 : 3.5,
+                  zoom:      selected.longitude ? 12 : 3.5,
                 }}
                 mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
-                mapStyle="mapbox://styles/mapbox/light-v11"
+                mapStyle="mapbox://styles/mapbox/outdoors-v12"
                 style={{ width: '100%', height: '100%' }}
               >
                 <NavigationControl position="top-right" />
                 {selected.longitude && selected.latitude && (
-                  <div style={{
-                    position: 'absolute',
-                    left: '50%', top: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    pointerEvents: 'none'
-                  }}>
-                    <MapPin size={28} style={{ color: '#2a9d8f' }} fill="#2a9d8f" strokeWidth={1} />
-                  </div>
+                  <>
+                    {/* Pulse ring */}
+                    <div style={{
+                      position: 'absolute',
+                      left: '50%', top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <div style={{
+                        width: '48px', height: '48px',
+                        borderRadius: '50%',
+                        background: 'rgba(42, 157, 143, 0.15)',
+                        border: '2px solid rgba(42, 157, 143, 0.4)',
+                        position: 'absolute',
+                      }} />
+                      <MapPin size={32} style={{ color: '#2a9d8f', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} fill="#2a9d8f" strokeWidth={1} />
+                    </div>
+
+                    {/* Zip code label */}
+                    <div style={{
+                      position: 'absolute',
+                      left: '50%', top: 'calc(50% + 28px)',
+                      transform: 'translateX(-50%)',
+                      pointerEvents: 'none',
+                      background: 'rgba(255,255,255,0.92)',
+                      backdropFilter: 'blur(4px)',
+                      borderRadius: '99px',
+                      padding: '3px 10px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#1a1a1a',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {selected.city ? `${selected.city}, ${selected.state}` : selected.zip_code} · {selected.zip_code}
+                    </div>
+                  </>
                 )}
               </Map>
             </div>
