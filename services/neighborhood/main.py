@@ -98,17 +98,16 @@ def search_neighborhoods(
         SELECT
             zip_code, city, state, metro_area,
             zhvi_sfr, zhvi_sfrcondo, zori_rent,
-            median_sale_price, days_to_pending,
-            market_heat_index, median_income,
-            owner_occupied_pct, total_schools,
-            academic_score, education_index,
-            price_to_income_ratio, affordability_score,
-            value_score, value_tier,
+            median_income, owner_occupied_pct,
+            education_index, academic_score,
             safety_index, violent_crime_rate,
             property_crime_rate, air_quality_index,
             median_aqi, natural_amenity_score,
-            amenity_rank, total_population,
-            pop_density_class, last_updated
+            price_to_income_ratio, affordability_score,
+            value_score, value_tier,
+            total_population, pop_density_class,
+            latitude, longitude,
+            last_updated
         FROM `{PROJECT_ID}.{DATASET}.neighborhood_features`
         WHERE {where}
         ORDER BY {sort_by} {sort_direction} NULLS LAST

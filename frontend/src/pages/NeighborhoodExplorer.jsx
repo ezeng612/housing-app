@@ -618,7 +618,7 @@ export default function NeighborhoodExplorer() {
             </div>
 
             {/* Mapbox map */}
-            <div style={{ height: '420px', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem', position: 'relative' }}>
+            <div style={{ height: '600px', borderRadius: 'var(--border-radius-lg)', overflow: 'hidden', marginBottom: '2rem', position: 'relative' }}>
               <Map
                 key={selected.zip_code}
                 initialViewState={{
